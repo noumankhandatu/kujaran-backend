@@ -1,0 +1,332 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User model
+model User {
+  id               Int                @id @default(autoincrement())
+  name             String
+  dob              DateTime
+  nationality      String
+  email            String             @unique
+  phone            String
+  password         String
+  role             Role               @default(RIDER)
+  image            String
+  gender           String
+  token            String?
+  is_verified      Boolean
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  horses           Horse[] // A user can have multiple horses
+  registrations    Registration[] // A user can have multiple registrations
+  articles         Article[] // A user can have multiple articles
+  class            CompetitionClass[]
+  event            Event[]
+  Stable           Stable?            @relation(fields: [stableId], references: [id])
+  stableId         Int?
+  JumpingScore     JumpingScore[]
+  DressageScore    DressageScore[]
+  score            Allscores[]
+  EnduranceScore   EnduranceScore[]
+  DressageArticle  DressageArticle[]
+  JumpingArticle   JumpingArticle[]
+  EnduranceArticle EnduranceArticle[]
+
+  @@map("user")
+}
+
+enum Role {
+  RIDER
+  JUDGE
+  SUPERVISOR
+}
+
+model PasswordReset {
+  id    Int    @id @default(autoincrement())
+  email String
+  token String
+}
+
+// Horse model
+model Horse {
+  id             Int              @id @default(autoincrement())
+  name           String
+  dob            DateTime
+  color          String
+  gender         String
+  stable         Stable?          @relation(fields: [stableId], references: [id])
+  stableId       Int?
+  image          String
+  email          String           @unique
+  phone          String
+  password       String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId], references: [id])
+  userId         Int
+  registrations  Registration[]
+  JumpingScore   JumpingScore[]
+  DressageScore  DressageScore[]
+  EnduranceScore EnduranceScore[]
+
+  @@map("horse")
+}
+
+model Stable {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String
+  email     String
+  phone     String?
+  image     String?
+  password  String
+  horses    Horse[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+}
+
+model Event {
+  id               Int                @id @default(autoincrement())
+  title            String
+  location         String
+  description      String
+  startDate        DateTime
+  endDate          DateTime
+  status           EventStatus
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  registrations    Registration[] // One-to-many relationship with Registration
+  image            String
+  sponsors         EventSponsor[]
+  pdfForm          pdfForm[]
+  users            User               @relation(fields: [userId], references: [id])
+  userId           Int
+  CompetitionClass CompetitionClass[]
+  JumpingScore     JumpingScore[]
+  DressageScore    DressageScore[]
+  EnduranceScore   EnduranceScore[]
+}
+
+enum EventStatus {
+  UPCOMING
+  LIVE
+  ENDED
+}
+
+model EventSponsor {
+  id      Int    @id @default(autoincrement())
+  name    String
+  image   String
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId Int
+}
+
+// pdfForm model
+model pdfForm {
+  id       Int    @id @default(autoincrement())
+  filename String
+  filePath String
+  event    Event  @relation(fields: [eventId], references: [id])
+  eventId  Int
+}
+
+model ResultList {
+  id            Int            @id @default(autoincrement())
+  registrations Registration[]
+}
+
+model CompetitionClass {
+  id             Int              @id @default(autoincrement())
+  className      String
+  classStatus    ClassStatus
+  type           DisciplineEnum
+  classStartTime DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  registrations  Registration[]
+  userId         Int
+  user           User             @relation(fields: [userId], references: [id])
+  Event          Event            @relation(fields: [eventId], references: [id])
+  eventId        Int
+  JumpingScore   JumpingScore[]
+  DressageScore  DressageScore[]
+  EnduranceScore EnduranceScore[]
+}
+
+enum ClassStatus {
+  Pending
+  ON_GOING
+  COMPLETED
+  Cancelled
+}
+
+enum DisciplineEnum {
+  DRESSAGE
+  SHOW_JUMPING
+  ENDURANCE
+  EVENTING
+}
+
+// Registration model
+model Registration {
+  id             Int              @id @default(autoincrement())
+  class          CompetitionClass @relation(fields: [classId], references: [id])
+  classId        Int
+  horse          Horse            @relation(fields: [horseId], references: [id])
+  horseId        Int
+  event          Event            @relation(fields: [eventId], references: [id])
+  eventId        Int
+  paymentStatus  String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  user           User             @relation(fields: [userId], references: [id])
+  userId         Int
+  stabling       Int?
+  JumpingScore   JumpingScore[]
+  DressageScore  DressageScore[]
+  EnduranceScore EnduranceScore[]
+  startDate      DateTime
+  endDate        DateTime
+  Allscores      Allscores[]
+  ResultList     ResultList?      @relation(fields: [resultListId], references: [id])
+  resultListId   Int?
+
+  @@index([eventId, userId], name: "event_rider_index")
+}
+
+// Article model
+model Article {
+  id               Int                @id @default(autoincrement())
+  name             String
+  type             DisciplineEnum
+  user             User               @relation(fields: [userId], references: [id])
+  userId           Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  DressageArticles DressageArticle[]
+  JumpingArticle   JumpingArticle[]
+  EnduranceArticle EnduranceArticle[]
+}
+
+model DressageArticle {
+  id         Int      @id @default(autoincrement())
+  moves      String
+  multiplier Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  Article    Article  @relation(fields: [articleId], references: [id])
+  articleId  Int
+  User       User?    @relation(fields: [userId], references: [id])
+  userId     Int?
+}
+
+model JumpingArticle {
+  id           Int      @id @default(autoincrement())
+  input        String
+  sortPriority Float
+  Article      Article  @relation(fields: [articleId], references: [id])
+  articleId    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  User         User?    @relation(fields: [userId], references: [id])
+  userId       Int?
+}
+
+model EnduranceArticle {
+  id        Int      @id @default(autoincrement())
+  Gate      String
+  Article   Article  @relation(fields: [articleId], references: [id])
+  articleId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
+}
+
+model Allscores {
+  id                     Int              @id @default(autoincrement())
+  totalAverageDifference Float?
+  user                   User             @relation(fields: [userId], references: [id])
+  userId                 Int
+  Registration           Registration     @relation(fields: [registrationId], references: [id])
+  registrationId         Int
+  JumpingScore           JumpingScore[]
+  DressageScore          DressageScore[]
+  EnduranceScore         EnduranceScore[]
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+}
+
+model JumpingScore {
+  id             Int               @id @default(autoincrement())
+  faults         Int
+  time           Float
+  totalScore     Float
+  value          String
+  class          CompetitionClass? @relation(fields: [classId], references: [id])
+  classId        Int?
+  user           User              @relation(fields: [userId], references: [id])
+  userId         Int
+  event          Event?            @relation(fields: [eventId], references: [id])
+  eventId        Int?
+  horse          Horse?            @relation(fields: [horseId], references: [id])
+  horseId        Int?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  Registration   Registration      @relation(fields: [registrationId], references: [id])
+  registrationId Int
+  Allscores      Allscores?        @relation(fields: [allscoresId], references: [id])
+  allscoresId    Int?
+}
+
+model DressageScore {
+  id             Int               @id @default(autoincrement())
+  move           String
+  multiplier     Float
+  scores         Float
+  totalScore     Float
+  comment        String
+  value          String
+  user           User              @relation(fields: [userId], references: [id])
+  userId         Int
+  class          CompetitionClass? @relation(fields: [classId], references: [id])
+  classId        Int?
+  event          Event?            @relation(fields: [eventId], references: [id])
+  eventId        Int?
+  horse          Horse?            @relation(fields: [horseId], references: [id])
+  horseId        Int?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  Registration   Registration      @relation(fields: [registrationId], references: [id])
+  registrationId Int
+  Allscores      Allscores?        @relation(fields: [allscoresId], references: [id])
+  allscoresId    Int?
+}
+
+model EnduranceScore {
+  id             Int               @id @default(autoincrement())
+  arrival        DateTime
+  departure      DateTime
+  recovery       DateTime
+  user           User              @relation(fields: [userId], references: [id])
+  userId         Int
+  class          CompetitionClass? @relation(fields: [classId], references: [id])
+  classId        Int?
+  event          Event?            @relation(fields: [eventId], references: [id])
+  eventId        Int?
+  horse          Horse?            @relation(fields: [horseId], references: [id])
+  horseId        Int?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  Registration   Registration      @relation(fields: [registrationId], references: [id])
+  registrationId Int
+  Allscores      Allscores?        @relation(fields: [allscoresId], references: [id])
+  allscoresId    Int?
+}
